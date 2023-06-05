@@ -394,6 +394,29 @@ static uint32_t default_get_dram_x_shift_dep(const hb_mc_manycore_t *mc)
         return hb_mc_config_get_vcache_bitwidth_data_addr(cfg);
 }
 
+uint32_t xor_bus (uint32_t x) {
+  uint32_t result = 0;
+  for (int i = 0; i < 32; i++){
+    result ^= (x >> i) & 1;
+  }
+  return result;
+}
+
+void random_hash_xor(const hb_mc_eva_t *eva, hb_mc_idx_t *address)
+{
+        int matrix[4] = {
+                {0b11010001111010000010},
+                {0b00100101111101011110},
+                {0b01111011100010100001},
+                {0b01000010000000100110},
+        };
+        uint32_t addr = 0;
+        for (int i = 0; i < 4; i++) {
+                addr |= xor_bus((((*eva)&(~0xfc00003f)) & matrix[i]<<6))<<i;
+        }
+        *address = addr;
+}
+
 // See comments on default_eva_to_npa_dram 
 static int default_eva_get_x_coord_dram(const hb_mc_manycore_t *mc,
                                         const hb_mc_config_t *cfg,
@@ -418,8 +441,13 @@ static int default_eva_get_x_coord_dram(const hb_mc_manycore_t *mc,
         uint32_t dram_max_x_coord = default_dram_max_x_coord(cfg, src);
         uint32_t dram_min_x_coord = default_dram_min_x_coord(cfg, src);
 
-        *x = (hb_mc_eva_addr(eva) >> stripe_log) & xmask;
+        // *x = (hb_mc_eva_addr(eva) >> stripe_log) & xmask;
+        random_hash_xor(eva, x);
+        *x &= 0xf;
+        bsg_pr_info("%s: x_previ: 0x%08" PRIx32 "\n", __func__, *x);
+        bsg_pr_info("%s: eva add: 0x%08" PRIx32 "\n", __func__, hb_mc_eva_addr(eva));
         *x += hb_mc_coordinate_get_x(og);
+        bsg_pr_info("%s: x_after: 0x%08" PRIx32 "\n", __func__, *x);
         if (*x > dram_max_x_coord || *x < dram_min_x_coord) {
                 bsg_pr_err("%s: Translation of EVA 0x%08" PRIx32 " failed. The X-coordinate "
                            "of the NPA of requested DRAM bank (%d) is outside of "
