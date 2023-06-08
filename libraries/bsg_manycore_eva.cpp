@@ -444,10 +444,7 @@ static int default_eva_get_x_coord_dram(const hb_mc_manycore_t *mc,
         // *x = (hb_mc_eva_addr(eva) >> stripe_log) & xmask;
         random_hash_xor(eva, x);
         *x &= 0xf;
-        bsg_pr_info("%s: x_previ: 0x%08" PRIx32 "\n", __func__, *x);
-        bsg_pr_info("%s: eva add: 0x%08" PRIx32 "\n", __func__, hb_mc_eva_addr(eva));
         *x += hb_mc_coordinate_get_x(og);
-        bsg_pr_info("%s: x_after: 0x%08" PRIx32 "\n", __func__, *x);
         if (*x > dram_max_x_coord || *x < dram_min_x_coord) {
                 bsg_pr_err("%s: Translation of EVA 0x%08" PRIx32 " failed. The X-coordinate "
                            "of the NPA of requested DRAM bank (%d) is outside of "
